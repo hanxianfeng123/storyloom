@@ -1,0 +1,27 @@
+stages:
+  - name: planner
+    model_ref: claude-sonnet
+    provider: anthropic
+  - name: writer
+    model_ref: deepseek-chat
+    provider: deepseek
+  - name: editor
+    model_ref: claude-sonnet
+    provider: anthropic
+  - name: continuity
+    model_ref: claude-sonnet
+    provider: anthropic
+  - name: quality_gate
+    model_ref: claude-sonnet
+    provider: anthropic
+
+review_gates:
+  planner: optional
+  writer: skip
+  editor: optional
+  continuity: skip
+  quality: always
+
+trust_mode:
+  enabled: true
+  auto_approve_after: 5
