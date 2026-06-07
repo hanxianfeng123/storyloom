@@ -81,12 +81,13 @@ class SkillRegistry:
         def flatten_children(children, parent_id=None):
             for child in children:
                 skill_id = uuid.uuid4().hex[:12]
+                has_children = "children" in child
                 yield {
                     "id": skill_id,
                     "category": child.get("category", "general"),
                     "name": child["name"],
                     "parent_id": parent_id,
-                    "description": child["description"],
+                    "description": child.get("description", ""),
                     "system_prompt": child.get("system_prompt", ""),
                     "user_prompt_template": child.get("user_prompt_template", ""),
                     "post_process_template": child.get("post_process_template"),
@@ -95,7 +96,7 @@ class SkillRegistry:
                     "max_tokens": child.get("max_tokens", 4096),
                     "temperature": child.get("temperature", 0.7),
                     "version": 1,
-                    "is_active": True,
+                    "is_active": not has_children,
                 }
                 if "children" in child:
                     yield from flatten_children(child["children"], skill_id)
