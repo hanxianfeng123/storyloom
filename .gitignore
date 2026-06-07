@@ -7,4 +7,9 @@ build/
 .env
 *.db
 node_modules/
-dist/
+docs/
+.claude/
+.pytest_cache/
+.ruff_cache/
+tsconfig.tsbuildinfo
+*.egg-info/
