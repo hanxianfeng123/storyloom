@@ -4,7 +4,6 @@ from storyloom.memory.models.character import Character
 from storyloom.memory.models.plot_thread import PlotThread
 from storyloom.memory.models.world_state import WorldStateEntry
 from storyloom.memory.models.chapter import ChapterRecord
-from storyloom.core.errors import MemoryError
 from pathlib import Path
 
 
@@ -121,6 +120,10 @@ class SQLiteStore:
             (project_id, pipeline_id, stage, model, tokens_in, tokens_out, latency_ms, result),
         )
         await self._conn.commit()
+
+    @property
+    def connection(self) -> aiosqlite.Connection | None:
+        return self._conn
 
     def close(self):
         if self._conn:

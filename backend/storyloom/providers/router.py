@@ -1,31 +1,18 @@
-from storyloom.providers.base import LLMProvider
+"""Provider router — maps (stage, language) to a LiteLLM model string."""
 
 DEFAULT_ROUTING = {
-    ("planner", "zh"): "claude-sonnet",
-    ("planner", "en"): "claude-sonnet",
-    ("writer", "zh"): "deepseek-chat",
-    ("writer", "en"): "claude-sonnet",
-    ("editor", "zh"): "claude-sonnet",
-    ("editor", "en"): "claude-sonnet",
-    ("quality", "zh"): "claude-sonnet",
-    ("quality", "en"): "claude-sonnet",
-    ("continuity", "zh"): "claude-sonnet",
-    ("continuity", "en"): "claude-sonnet",
+    ("planner", "zh"): "anthropic/claude-sonnet-4-20250514",
+    ("planner", "en"): "anthropic/claude-sonnet-4-20250514",
+    ("writer", "zh"): "deepseek/deepseek-chat",
+    ("writer", "en"): "anthropic/claude-sonnet-4-20250514",
+    ("editor", "zh"): "anthropic/claude-sonnet-4-20250514",
+    ("editor", "en"): "anthropic/claude-sonnet-4-20250514",
+    ("quality", "zh"): "anthropic/claude-sonnet-4-20250514",
+    ("quality", "en"): "anthropic/claude-sonnet-4-20250514",
+    ("continuity", "zh"): "anthropic/claude-sonnet-4-20250514",
+    ("continuity", "en"): "anthropic/claude-sonnet-4-20250514",
 }
 
 
-class ProviderRouter:
-    def __init__(self) -> None:
-        self._providers: dict[str, tuple[str, LLMProvider]] = {}
-        self._routing: dict[tuple[str, str], str] = dict(DEFAULT_ROUTING)
-
-    def register(self, model_name: str, provider_type: str, provider: LLMProvider) -> None:
-        self._providers[model_name] = (provider_type, provider)
-
-    def select(self, stage: str, language: str = "zh") -> tuple[str, LLMProvider | None]:
-        model_name = self._routing.get((stage, language), "claude-sonnet")
-        _, provider = self._providers.get(model_name, (None, None))
-        return model_name, provider
-
-    def override_routing(self, stage: str, language: str, model_name: str) -> None:
-        self._routing[(stage, language)] = model_name
+def select(stage: str, language: str = "zh") -> str:
+    return DEFAULT_ROUTING.get((stage, language), "anthropic/claude-sonnet-4-20250514")

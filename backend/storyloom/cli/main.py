@@ -19,10 +19,10 @@ def serve(host: str = "127.0.0.1", port: int = 8000):
 
 
 @app.command()
-def run(chapter: str):
-    """Run the pipeline headless for one or more chapters."""
+def run(chapter: str, legacy: bool = False):
+    """Run the pipeline headless for one or more chapters. Uses LLM-driven supervisor by default."""
     from storyloom.cli.commands.run import run_pipeline
-    run_pipeline(chapter)
+    run_pipeline(chapter, legacy=legacy)
 
 
 if __name__ == "__main__":

@@ -1,28 +1,31 @@
 import pytest
+from unittest.mock import patch, AsyncMock
 from storyloom.core.stages.writer import WriterStage
 from storyloom.core.contract import StageInput, PipelineContext, StoryBible
-
-
-class MockProvider:
-    async def complete(self, messages, model=None, temperature=0.7, max_tokens=4096):
-        from storyloom.providers.base import LLMResponse
-        return LLMResponse(
-            content="# Chapter 1\n\nIt was a dark and stormy night...",
-            model="mock", tokens_in=0, tokens_out=0, latency_ms=0,
-        )
+from storyloom.providers.litellm import LLMResponse
 
 
 @pytest.mark.asyncio
 async def test_writer_returns_chapter_content():
-    stage = WriterStage(llm_provider=MockProvider())
-    inp = StageInput(
-        project_id="proj-1",
-        chapter_id="## Outline\n1. Opening",
-        context=PipelineContext(
-            story_bible=StoryBible(title="Test", genre="Fantasy"),
-        ),
+    mock_response = LLMResponse(
+        content="# Chapter 1\n\nIt was a dark and stormy night...",
+        model="mock",
+        tokens_in=50,
+        tokens_out=10,
+        latency_ms=100,
     )
-    output = await stage.execute(inp)
-    assert output.content is not None
-    assert len(output.content) > 0
-    assert output.decision == "approved"
+
+    # Patch where 'complete' is used: storyloom.core.stages.base (LLMStage imports it)
+    with patch("storyloom.core.stages.base.complete", new_callable=AsyncMock, return_value=mock_response):
+        inp = StageInput(
+            project_id="proj-1",
+            chapter_id="## Outline\n1. Opening",
+            context=PipelineContext(
+                story_bible=StoryBible(title="Test", genre="Fantasy"),
+            ),
+        )
+        output = await WriterStage.execute(inp)
+        assert output.content is not None
+        assert len(output.content) > 0
+        assert output.decision == "approved"
+        assert output.metrics.model == "mock"

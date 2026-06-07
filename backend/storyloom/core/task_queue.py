@@ -1,7 +1,7 @@
 import asyncio
 import uuid
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
 
@@ -16,6 +16,8 @@ class TaskInfo:
 
 
 class TaskQueue:
+    """Simple in-process async task queue."""
+
     def __init__(self):
         self._tasks: dict[str, TaskInfo] = {}
 
@@ -37,26 +39,14 @@ class TaskQueue:
         finally:
             info.completed_at = time.time()
 
-    async def run(self, fn) -> Any:
-        if asyncio.iscoroutinefunction(fn):
-            coro = fn()
-        elif asyncio.iscoroutine(fn):
-            coro = fn
-        else:
-            result = fn()
-            if asyncio.iscoroutine(result):
-                coro = result
-            else:
-                async def wrapper():
-                    return result
-                coro = wrapper()
-        info = await self.submit(coro)
-        while info.status == "running":
-            await asyncio.sleep(0.1)
-        if info.status == "failed":
-            raise RuntimeError(info.error)
-        return info.result
-
     def get_status(self, task_id: str) -> str | None:
         info = self._tasks.get(task_id)
         return info.status if info else None
+
+    def get_result(self, task_id: str) -> Any:
+        info = self._tasks.get(task_id)
+        if info is None:
+            return None
+        if info.status == "failed":
+            raise RuntimeError(info.error or "Unknown error")
+        return info.result

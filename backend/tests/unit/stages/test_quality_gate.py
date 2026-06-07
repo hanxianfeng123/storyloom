@@ -1,10 +1,7 @@
-import pytest
 from storyloom.core.stages.quality_gate import (
-    QualityGateStage,
     check_dormant_threads,
     check_absent_characters,
     check_word_count,
-    QualityIssue,
 )
 
 

@@ -2,7 +2,7 @@ import hashlib
 import json
 from collections import OrderedDict
 
-from storyloom.providers.base import LLMResponse
+from storyloom.providers.litellm import LLMResponse
 
 
 class LLMCache:

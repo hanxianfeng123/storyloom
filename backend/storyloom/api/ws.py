@@ -8,7 +8,7 @@ async def pipeline_ws(websocket: WebSocket, pipeline_id: str):
     await websocket.accept()
     try:
         while True:
-            data = await websocket.receive_json()
+            await websocket.receive_json()
             # Echo back for now; will push stage progress
             await websocket.send_json({"status": "progress", "pipeline_id": pipeline_id})
     except Exception:

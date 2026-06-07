@@ -1,43 +1,31 @@
-from storyloom.core.stages.base import Stage
-from storyloom.core.contract import StageInput, StageOutput, StageMetrics
-from storyloom.providers.base import LLMProvider, Message
+# DEPRECATED — will be removed in favor of DB-driven skills (definitions.yaml → editor).
+from storyloom.core.stages.base import LLMStage
 from storyloom.i18n.zh.prompts.editor import EDITOR_SYSTEM_PROMPT
-from storyloom.providers.pricing import estimate_cost
+from storyloom.providers.router import select
 
 
-class EditorStage(Stage):
-    name = "editor"
+def build_editor_prompt(input):
+    original = input.chapter_id or ""
+    return (
+        f"Edit this chapter. Preserve a change log at the end.\n\n"
+        f"Draft:\n{original}"
+    )
 
-    def __init__(self, llm_provider: LLMProvider, model: str = "claude-sonnet"):
-        self.provider = llm_provider
-        self.model = model
 
-    async def execute(self, input: StageInput) -> StageOutput:
-        original = input.chapter_id or ""
-        messages = [
-            Message(role="system", content=EDITOR_SYSTEM_PROMPT),
-            Message(role="user", content=(
-                f"Edit this chapter. Preserve a change log at the end.\n\n"
-                f"Draft:\n{original}"
-            )),
-        ]
-        response = await self.provider.complete(messages, model=self.model)
-        cost = estimate_cost(response.model, response.tokens_in, response.tokens_out)
-        # Append change log with diff summary
-        revised = response.content + (
-            f"\n\n---\n## Editor Change Log\n"
-            f"- Original length: {len(original)} chars\n"
-            f"- Revised length: {len(response.content)} chars\n"
-            f"- Changes: line edits, grammar fixes, style polish"
-        )
-        return StageOutput(
-            content=revised,
-            decision="approved",
-            metrics=StageMetrics(
-                model=response.model,
-                tokens_in=response.tokens_in,
-                tokens_out=response.tokens_out,
-                latency_ms=response.latency_ms,
-                cost_usd=cost,
-            ),
-        )
+def editor_post_process(input, content: str) -> str:
+    original = input.chapter_id or ""
+    return content + (
+        f"\n\n---\n## Editor Change Log\n"
+        f"- Original length: {len(original)} chars\n"
+        f"- Revised length: {len(content)} chars\n"
+        f"- Changes: line edits, grammar fixes, style polish"
+    )
+
+
+EditorStage = LLMStage(
+    name="editor",
+    system_prompt=EDITOR_SYSTEM_PROMPT,
+    model=select("editor", "zh"),
+    build_user_prompt=build_editor_prompt,
+    post_process=editor_post_process,
+)

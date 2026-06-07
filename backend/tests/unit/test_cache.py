@@ -1,6 +1,6 @@
 import pytest
 from storyloom.core.cache import LLMCache
-from storyloom.providers.base import LLMResponse
+from storyloom.providers.litellm import LLMResponse
 
 
 @pytest.mark.asyncio

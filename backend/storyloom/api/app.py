@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from storyloom.api.routes import projects, pipeline, memory, chapters
+from storyloom.api.routes import projects, pipeline, memory, chapters, skills
 from storyloom.api import ws
 
 app = FastAPI(title="Storyloom", version="0.1.0")
@@ -9,6 +9,7 @@ app.include_router(projects.router, prefix="/api/projects", tags=["projects"])
 app.include_router(pipeline.router, prefix="/api/pipeline", tags=["pipeline"])
 app.include_router(memory.router, prefix="/api/memory", tags=["memory"])
 app.include_router(chapters.router, prefix="/api/chapters", tags=["chapters"])
+app.include_router(skills.router, prefix="/api/skills", tags=["skills"])
 app.include_router(ws.router)
 
 

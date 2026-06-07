@@ -1,0 +1,25 @@
+services:
+  storyloom-backend:
+    build:
+      context: ./backend
+    container_name: storyloom-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - STORYLOOM_DATABASE_URL=sqlite:///./data/storyloom.db
+    volumes:
+      - backend-data:/app/data
+    restart: unless-stopped
+
+  storyloom-frontend:
+    build:
+      context: ./frontend
+    container_name: storyloom-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - storyloom-backend
+    restart: unless-stopped
+
+volumes:
+  backend-data:

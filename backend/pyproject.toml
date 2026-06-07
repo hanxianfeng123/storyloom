@@ -15,11 +15,11 @@ dependencies = [
     "structlog>=24.1",
     "typer>=0.9",
     "httpx>=0.26",
-    "anthropic>=0.30",
-    "openai>=1.12",
+    "litellm>=1.40",
     "aiofiles>=23.2",
     "markdown>=3.5",
     "pyyaml>=6.0",
+    "Jinja2>=3.1",
     "aiosqlite>=0.20",
 ]
 [project.optional-dependencies]

@@ -1,30 +1,29 @@
 import pytest
+from unittest.mock import patch, AsyncMock
 from storyloom.core.stages.continuity import ContinuityStage
 from storyloom.core.contract import StageInput, PipelineContext, StoryBible, ChapterSummary
 
 
-class MockProvider:
-    async def complete(self, messages, model=None, temperature=0.7, max_tokens=4096):
-        from storyloom.providers.base import LLMResponse
-        return LLMResponse(
-            content="No inconsistencies found.",
-            model="mock", tokens_in=10, tokens_out=5, latency_ms=50,
-        )
-
-
 @pytest.mark.asyncio
 async def test_continuity_checks_consistency():
-    stage = ContinuityStage(llm_provider=MockProvider())
-    inp = StageInput(
-        project_id="proj-1",
-        chapter_id="Chapter text here...",
-        context=PipelineContext(
-            story_bible=StoryBible(title="Test", genre="Fantasy"),
-            chapter_history=[
-                ChapterSummary(number=1, title="Ch1", summary="The hero begins their journey."),
-            ],
-        ),
-    )
-    output = await stage.execute(inp)
-    assert output.content is not None
-    assert output.decision == "approved"
+    mock_response = AsyncMock()
+    mock_response.content = "No inconsistencies found."
+    mock_response.model = "mock"
+    mock_response.tokens_in = 10
+    mock_response.tokens_out = 5
+    mock_response.latency_ms = 50
+
+    with patch("storyloom.providers.litellm.complete", new_callable=AsyncMock, return_value=mock_response):
+        inp = StageInput(
+            project_id="proj-1",
+            chapter_id="Chapter text here...",
+            context=PipelineContext(
+                story_bible=StoryBible(title="Test", genre="Fantasy"),
+                chapter_history=[
+                    ChapterSummary(number=1, title="Ch1", summary="The hero begins their journey."),
+                ],
+            ),
+        )
+        output = await ContinuityStage.execute(inp)
+        assert output.content is not None
+        assert output.decision == "approved"

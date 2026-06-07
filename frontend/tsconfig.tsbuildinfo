@@ -1,0 +1,1 @@
+{"root":["./src/env.d.ts","./src/main.ts","./src/api/client.ts","./src/router/index.ts","./src/app.vue","./src/components/themetoggle.vue","./src/pages/memoryexplorer.vue","./src/pages/pipelinerun.vue","./src/pages/projectdetail.vue","./src/pages/projectlist.vue","./src/pages/skilleditor.vue"],"version":"5.7.3"}

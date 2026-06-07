@@ -1,7 +1,6 @@
 import pytest
 from pydantic import ValidationError
 from storyloom.core.contract import (
-    StageInput,
     StageOutput,
     PipelineContext,
     StageMetrics,

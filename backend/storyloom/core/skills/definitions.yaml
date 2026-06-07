@@ -1,0 +1,137 @@
+categories:
+  - name: writing
+    description: Plan, write, or edit chapter content
+    children:
+      - name: planner
+        description: >
+          Generate a chapter outline when starting a new chapter or after a
+          major direction change. Use before writing to establish structure,
+          plot points, pacing, and foreshadowing.
+        model: "deepseek/deepseek-chat"
+        max_tokens: 4096
+        system_prompt: |
+          你是一个专业的小说章节规划师。你的任务是根据已有设定和故事进展，为下一章生成详细的写作大纲。
+
+          要求：
+          1. 输出格式为 Markdown 列表，每节包含 2-3 个关键情节点
+          2. 每节标注预期字数
+          3. 确保情节节奏合理，有起承转合
+          4. 标注本章需要推进的情节线和伏笔
+          5. 确保与前文连贯
+        user_prompt_template: |
+          Title: {{ story_bible.title }}
+          Genre: {{ story_bible.genre }}
+          Summary: {{ story_bible.summary }}
+          Previous chapters: {{ chapter_history | length }}
+          Style guide: {{ style_guide or 'None' }}
+
+          Generate an outline for Chapter {{ chapter_number }}.
+          {% if supervisor_instructions %}
+          Focus: {{ supervisor_instructions }}
+          {% endif %}
+
+      - name: writer
+        description: >
+          Write chapter prose from an outline. Also use for targeted revisions
+          when the quality gate or continuity check finds specific issues.
+          Produces full narrative text.
+        model: "deepseek/deepseek-chat"
+        max_tokens: 8192
+        temperature: 0.8
+        system_prompt: |
+          你是一个专业的小说作家。你的任务是根据大纲写出高质量的章节正文。
+
+          要求：
+          1. 使用中文写作，语言流畅自然
+          2. 避免解释腔、自问自答、过度因果连接词
+          3. 每段不超过 200 字
+          4. 对话符合角色性格
+          5. 描写有画面感，避免空洞形容词
+        user_prompt_template: |
+          Title: {{ story_bible.title }}
+          Genre: {{ story_bible.genre }}
+          Outline: {{ current_outline or '(see history)' }}
+          Style: {{ style_guide or 'Standard' }}
+
+          Write Chapter {{ chapter_number }}.
+          {% if supervisor_instructions %}
+          Revision notes: {{ supervisor_instructions }}
+          {% endif %}
+
+      - name: editor
+        description: >
+          Polish prose quality: fix grammar, smooth flow, remove redundancy,
+          improve readability. Use after writer produces a draft. Preserves
+          original meaning and style.
+        model: "anthropic/claude-sonnet-4-20250514"
+        max_tokens: 4096
+        system_prompt: |
+          你是一个资深编辑。对以下章节进行润色。
+
+          要求：
+          1. 修正语病和不通顺的句子
+          2. 删除冗余表达
+          3. 保持原意和风格不变
+          4. 输出使用 diff 格式标注修改
+        user_prompt_template: |
+          Edit this chapter for publication.
+
+          Draft:
+          {{ chapter_content }}
+        post_process_template: |
+
+          ---
+          ## Editor Change Log
+          - Original: {{ original_content | length }} chars
+          - Revised: {{ new_content | length }} chars
+
+  - name: review
+    description: Check quality and consistency. Use after writing to verify.
+    children:
+      - name: continuity
+        description: >
+          Check for plot inconsistencies, character state errors, and setting
+          contradictions against chapter history. Produces a list of
+          discrepancies or confirms consistency.
+        model: "anthropic/claude-sonnet-4-20250514"
+        max_tokens: 1024
+        system_prompt: |
+          You are a continuity checker. Compare the current chapter against
+          the previous ones. List any discrepancies in character state, setting,
+          objects, or plot threads. Be specific.
+        user_prompt_template: |
+          Previous chapters:
+          {% for ch in (chapter_history or [])[-3:] %}
+          Ch {{ ch.number }}: {{ ch.summary }}
+          {% endfor %}
+
+          Current chapter:
+          {{ chapter_content }}
+
+          List inconsistencies only.
+
+      - name: quality
+        description: >
+          Run a 5-dimension quality assessment: plot consistency, character
+          voice, prose quality, pacing, language accuracy. Returns structured
+          JSON. Use when the chapter is believed ready to finalize.
+        model: "anthropic/claude-sonnet-4-20250514"
+        max_tokens: 1024
+        system_prompt: |
+          你是一个小说质量评审专家。从以下维度评审章节：
+
+          1. 情节一致性：是否与前文逻辑连贯
+          2. 角色声音：角色行为对话是否符合人设
+          3. 文笔质量：语言是否流畅、有表现力
+          4. 节奏控制：节奏是否合适
+          5. 语言准确度：语法用词是否准确
+
+          每个维度评分：pass/flag/fail。fail 需给出具体理由。
+
+          仅返回 JSON 对象。
+        user_prompt_template: |
+          Chapter {{ chapter_number }}:
+
+          {{ chapter_content[:4000] }}
+
+          Rate each dimension pass/flag/fail with reason.

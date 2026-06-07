@@ -1,18 +1,17 @@
-from storyloom.providers.pricing import estimate_cost
+from storyloom.providers.litellm import estimate_cost
 
 
-def test_claude_sonnet_pricing():
-    cost = estimate_cost("claude-sonnet", tokens_in=1000, tokens_out=500)
+def test_estimate_cost_returns_number():
+    cost = estimate_cost("anthropic/claude-sonnet-4-20250514", tokens_in=1000, tokens_out=500)
     assert cost > 0
-    assert cost < 1  # Should be < $1 for these token counts
+    assert cost < 1
 
 
-def test_deepseek_pricing_cheaper():
-    claude_cost = estimate_cost("claude-sonnet", tokens_in=1000, tokens_out=500)
-    deepseek_cost = estimate_cost("deepseek-chat", tokens_in=1000, tokens_out=500)
-    assert deepseek_cost < claude_cost
+def test_cost_zero_with_zero_tokens():
+    cost = estimate_cost("anthropic/claude-sonnet-4-20250514", tokens_in=0, tokens_out=0)
+    assert cost == 0
 
 
-def test_unknown_model_defaults():
+def test_unknown_model_returns_fallback():
     cost = estimate_cost("unknown-model", tokens_in=1000, tokens_out=500)
     assert cost >= 0

@@ -1,18 +1,12 @@
 import asyncio
 import typer
 from storyloom.memory.store import SQLiteStore
-from storyloom.providers.router import ProviderRouter
-from storyloom.providers.openai import OpenAIProvider
-from storyloom.providers.anthropic import AnthropicProvider
-from storyloom.providers.deepseek import DeepSeekProvider
+from storyloom.memory.skill_store import SkillStore
 from storyloom.core.pipeline import PipelineOrchestrator
-from storyloom.core.stages.planner import PlannerStage
-from storyloom.core.stages.writer import WriterStage
-from storyloom.core.stages.editor import EditorStage
-from storyloom.core.stages.continuity import ContinuityStage
-from storyloom.core.stages.quality_gate import QualityGateStage
+from storyloom.core.skills.registry import SkillRegistry
+from storyloom.core.skills.engine import SkillExecutionEngine
+from storyloom.core.skills.supervisor import SupervisorPipeline, SupervisorConfig
 from storyloom.core.contract import PipelineContext, StoryBible
-from storyloom.config.settings import Settings
 
 
 def parse_chapter_spec(chapter: str) -> list[int]:
@@ -23,51 +17,66 @@ def parse_chapter_spec(chapter: str) -> list[int]:
     return [int(chapter)]
 
 
-def run_pipeline(chapter: str):
-    """Run pipeline for chapter(s). Format: '3' or '3-5'."""
-    settings = Settings()
+def run_pipeline(chapter: str, legacy: bool = False):
+    """Run pipeline for chapter(s). Format: '3' or '3-5'.
+
+    Defaults to the LLM-driven supervisor pipeline.
+    Use --legacy to use the old hardcoded stage pipeline.
+    """
     chapters = parse_chapter_spec(chapter)
 
     async def _run():
         store = SQLiteStore("storyloom.db")
         await store.connect()
+        conn = store.connection
+        if conn is None:
+            raise RuntimeError("Database not connected")
+        skill_store = SkillStore(conn)
 
-        router = ProviderRouter()
-        if "openai" in settings.llm_providers:
-            router.register(
-                "gpt-4o",
-                "openai",
-                OpenAIProvider(api_key=settings.llm_providers["openai"]["api_key"]),
-            )
-        if "anthropic" in settings.llm_providers:
-            router.register(
-                "claude-sonnet",
-                "anthropic",
-                AnthropicProvider(api_key=settings.llm_providers["anthropic"]["api_key"]),
-            )
-        if "deepseek" in settings.llm_providers:
-            router.register(
-                "deepseek-chat",
-                "deepseek",
-                DeepSeekProvider(api_key=settings.llm_providers["deepseek"]["api_key"]),
-            )
+        ctx = PipelineContext(
+            project_id="default",
+            story_bible=StoryBible(title="", genre=""),
+        )
 
-        _, planner_provider = router.select("planner", "zh")
-        _, writer_provider = router.select("writer", "zh")
-
-        stages = [
-            PlannerStage(llm_provider=planner_provider),
-            WriterStage(llm_provider=writer_provider),
-            EditorStage(llm_provider=planner_provider),
-            ContinuityStage(llm_provider=planner_provider),
-            QualityGateStage(),
-        ]
-
-        orch = PipelineOrchestrator(stages=stages)
         for ch in chapters:
-            typer.echo(f"Generating chapter {ch}...")
-            ctx = PipelineContext(story_bible=StoryBible(title="", genre=""))
-            result = await orch.run(project_id="default", chapter_id=str(ch), context=ctx)
-            typer.echo(f"  -> {result.status}")
+            ctx.chapter_number = ch
+
+            if legacy:
+                from storyloom.core.stages.planner import PlannerStage
+                from storyloom.core.stages.writer import WriterStage
+                from storyloom.core.stages.editor import EditorStage
+                from storyloom.core.stages.continuity import ContinuityStage
+                from storyloom.core.stages.quality_gate import QualityGateStage
+
+                stages = [
+                    PlannerStage(),
+                    WriterStage(),
+                    EditorStage(),
+                    ContinuityStage(),
+                    QualityGateStage(),
+                ]
+                orch = PipelineOrchestrator(stages=stages)
+                result = await orch.run(
+                    project_id="default", chapter_id=str(ch), context=ctx
+                )
+            else:
+                registry = SkillRegistry(skill_store)
+                await registry.load_from_db()
+                engine = SkillExecutionEngine(skill_store, registry)
+                supervisor = SupervisorPipeline(
+                    engine, registry, skill_store, SupervisorConfig()
+                )
+                orch = PipelineOrchestrator(supervisor_pipeline=supervisor)
+                result = await orch.run(
+                    project_id="default", context=ctx, use_supervisor=True
+                )
+
+            typer.echo(f"Chapter {ch}: {result.status}")
+            if hasattr(result, "skill_log") and result.skill_log:
+                for s in result.skill_log:
+                    typer.echo(f"  Step {s.step}: {s.skill_name} ({s.status})")
+            if hasattr(result, "stage_results") and result.stage_results:
+                for r in result.stage_results:
+                    typer.echo(f"  {r['stage']}: {r['decision']}")
 
     asyncio.run(_run())

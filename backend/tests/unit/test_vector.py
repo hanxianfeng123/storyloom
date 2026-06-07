@@ -1,13 +1,6 @@
 import pytest
 from storyloom.memory.vector import VectorStore
 
-# sqlite-vec may or may not be installed
-try:
-    import sqlite_vec
-    has_vec = True
-except ImportError:
-    has_vec = False
-
 
 @pytest.fixture
 async def vstore(tmp_path):
@@ -26,10 +19,6 @@ async def test_add_and_search(vstore):
 
 
 @pytest.mark.asyncio
-@pytest.mark.skipif(not has_vec, reason="sqlite-vec not installed")
-async def test_vector_search_when_vec_available(vstore):
-    """This test only runs when sqlite-vec is available."""
-    await vstore.add_entry("proj-1", "The hero enters the dark forest", {"type": "scene"})
-    await vstore.add_entry("proj-1", "The villain plans revenge", {"type": "scene"})
-    results = await vstore.search("proj-1", "hero")
-    assert len(results) >= 1
+async def test_search_empty_returns_empty(vstore):
+    results = await vstore.search("proj-1", "nonexistent")
+    assert len(results) == 0

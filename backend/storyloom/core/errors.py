@@ -1,5 +1,3 @@
-
-
 class LLMError(Exception):
     def __init__(self, message: str, model: str = ""):
         self.model = model
@@ -27,11 +25,3 @@ class PipelineError(Exception):
 
 class MemoryError(Exception):
     pass
-
-
-retry_config = {
-    "max_retries": 3,
-    "backoff_exponential_base": 2,
-    "initial_delay_sec": 1,
-    "retryable_errors": ["RateLimitError", "TimeoutError", "ServiceUnavailableError"],
-}

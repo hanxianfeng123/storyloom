@@ -1,12 +1,4 @@
-import pytest
-from storyloom.core.errors import (
-    LLMError,
-    StageError,
-    ProviderError,
-    PipelineError,
-    MemoryError,
-    retry_config,
-)
+from storyloom.core.errors import LLMError, StageError, ProviderError
 
 
 def test_llm_error_is_exception():
@@ -25,7 +17,3 @@ def test_provider_error_is_llm_error():
     err = ProviderError("Rate limited", provider="openai", status_code=429)
     assert isinstance(err, LLMError)
     assert err.status_code == 429
-
-
-def test_retry_config_has_defaults():
-    assert retry_config["max_retries"] == 3

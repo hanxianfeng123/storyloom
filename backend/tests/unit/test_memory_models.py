@@ -1,6 +1,5 @@
-import pytest
 from datetime import datetime
-from storyloom.memory.models.character import Character, CharacterState
+from storyloom.memory.models.character import Character
 from storyloom.memory.models.plot_thread import PlotThread
 from storyloom.memory.models.world_state import WorldStateEntry
 from storyloom.memory.models.chapter import ChapterRecord

@@ -1,33 +1,22 @@
-import pytest
-from storyloom.providers.router import ProviderRouter
-from storyloom.providers.base import LLMProvider
+from storyloom.providers.router import select
 
 
-def test_router_requires_provider_registration():
-    router = ProviderRouter()
-    assert len(router._providers) == 0
+def test_select_returns_model_string():
+    model = select("planner", "zh")
+    assert isinstance(model, str)
+    assert "claude" in model or "deepseek" in model
 
 
-def test_register_provider():
-    router = ProviderRouter()
-    router.register("claude", "anthropic", MockProvider())
-    assert "claude" in router._providers
+def test_select_writer_zh_uses_deepseek():
+    model = select("writer", "zh")
+    assert "deepseek" in model
 
 
-def test_route_by_stage_and_language():
-    router = ProviderRouter()
-    mock = MockProvider()
-    router.register("claude-sonnet", "anthropic", mock)
-    router.register("deepseek-chat", "deepseek", mock)
-    # Writer + zh -> DeepSeek
-    model, provider = router.select("writer", "zh")
-    assert model == "deepseek-chat"
-    # Planner + en -> Claude
-    model, provider = router.select("planner", "en")
-    assert model == "claude-sonnet"
+def test_select_writer_en_uses_claude():
+    model = select("writer", "en")
+    assert "claude" in model
 
 
-class MockProvider:
-    async def complete(self, messages, model=None, temperature=0.7, max_tokens=4096):
-        from storyloom.providers.base import LLMResponse
-        return LLMResponse(content="mock", model=model or "mock", tokens_in=0, tokens_out=0, latency_ms=0)
+def test_select_unknown_stage_falls_back():
+    model = select("unknown_stage", "zh")
+    assert isinstance(model, str)
