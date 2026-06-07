@@ -54,6 +54,39 @@ class QualityGateStage(Stage):
     def __init__(self, llm_provider=None):
         self.provider = llm_provider
 
+    async def _llm_review(self, chapter_text: str, language: str = "zh") -> dict:
+        """Run 5-dimension LLM review on a chapter.
+
+        Returns dict like:
+        {
+            "plot_consistency": {"score": "pass", "reason": "..."},
+            "character_voice": {"score": "flag", "reason": "..."},
+            ...
+        }
+        """
+        from storyloom.i18n.zh.prompts.quality import QUALITY_SYSTEM_PROMPT
+        from storyloom.i18n.en.prompts.quality import QUALITY_SYSTEM_PROMPT as EN_QUALITY_SYSTEM_PROMPT
+        from storyloom.providers.base import Message
+        import json
+
+        prompt = QUALITY_SYSTEM_PROMPT if language == "zh" else EN_QUALITY_SYSTEM_PROMPT
+
+        messages = [
+            Message(role="system", content=prompt + "\n\nRespond ONLY with a JSON object."),
+            Message(role="user", content=f"Chapter:\n{chapter_text[:4000]}\n\nRate each dimension pass/flag/fail with reason."),
+        ]
+        response = await self.provider.complete(messages, max_tokens=1024)
+        try:
+            scores = json.loads(response.content)
+            # Validate all 5 dimensions present
+            required = {"plot_consistency", "character_voice", "prose_quality", "pacing", "language_accuracy"}
+            if not required.issubset(scores.keys()):
+                return {k: {"score": "flag", "reason": "parse error"} for k in required}
+            return scores
+        except (json.JSONDecodeError, KeyError):
+            return {k: {"score": "flag", "reason": "failed to parse review"}
+                    for k in ["plot_consistency", "character_voice", "prose_quality", "pacing", "language_accuracy"]}
+
     async def execute(self, input: StageInput) -> StageOutput:
         ctx = input.context
         issues: list[QualityIssue] = []
@@ -62,6 +95,18 @@ class QualityGateStage(Stage):
         if ctx.chapter_history:
             last_ch = ctx.chapter_history[-1]
             issues.extend(check_word_count(target=2000, actual=last_ch.word_count))
+
+        # LLM 5-dimension review
+        if self.provider and input.chapter_id:
+            language = "zh"  # Could be made configurable
+            llm_scores = await self._llm_review(str(input.chapter_id)[:4000], language)
+            llm_fails = [k for k, v in llm_scores.items() if isinstance(v, dict) and v.get("score") == "fail"]
+            if llm_fails:
+                issues.append(QualityIssue(
+                    check="llm_review",
+                    severity="critical",
+                    message=f"Failed dimensions: {', '.join(llm_fails)}",
+                ))
 
         review_notes = "\n".join(f"[{i.severity}] {i.check}: {i.message}" for i in issues)
         critical = any(i.severity == "critical" for i in issues)
