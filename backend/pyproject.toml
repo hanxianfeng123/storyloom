@@ -18,6 +18,8 @@ dependencies = [
     "anthropic>=0.30",
     "openai>=1.12",
     "aiofiles>=23.2",
+    "markdown>=3.5",
+    "aiosqlite>=0.20",
 ]
 [project.optional-dependencies]
 dev = [
