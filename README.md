@@ -146,10 +146,6 @@ storyloom/
 └── docker-compose.yml
 ```
 
-## 贡献
-
-欢迎贡献！请参考 [贡献指南](CONTRIBUTING.md)。
-
 ## License
 
 [MIT](LICENSE) © 2024 hanxianfeng123
