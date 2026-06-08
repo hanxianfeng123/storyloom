@@ -77,6 +77,8 @@ When doing any code writing, reviewing, or refactoring, you MUST invoke the `kar
 
 3. **LLM-driven control flow**: Design code so that LLMs make autonomous decisions rather than being constrained by rigid code logic. Favor patterns where the LLM chooses the path (e.g., stage `decision` field with `approved`/`rejected`/`need_revision`, provider routing by context). Avoid hardcoded if/else chains that could be replaced by LLM judgment. Each pipeline stage should be an LLM agent that decides what to do next, not a deterministic function.
 
+4. **Agent autonomy over code logic**: The framework provides infrastructure (message bus, blackboard, agent loop) but never orchestrates agent behavior. Do not implement retry logic, error handling strategies, execution ordering, or conditional branching in code — leave those decisions to the LLM agents. Agents perceive their environment (messages + blackboard state) and decide what to do. Code should answer "how do agents communicate?" not "what should agents do when X happens?". When in doubt, ask: can this decision be made by an LLM instead of hardcoded? If yes, don't write code for it.
+
 ### Environment Variables
 
 Backend settings are loaded from `STORYLOOM_*` env vars via pydantic-settings (`backend/storyloom/config/settings.py`):

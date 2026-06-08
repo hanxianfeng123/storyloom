@@ -40,32 +40,92 @@
 
 ---
 
-Storyloom is an AI-powered novel generation platform that orchestrates multiple large language models into a coherent creative pipeline — from plot planning and chapter writing to editing and quality assurance. Its persistent memory system ensures consistency across long-form narratives.
+Storyloom is an AI-powered novel generation platform. Multiple autonomous AI agents collaborate in a swarm — from plot planning and chapter writing to editing, continuity checking, and quality assurance — with every step decided by LLM judgment, not hardcoded logic. Its persistent memory system ensures consistency across long-form narratives.
 
 ## Key Features
 
-- **🧩 Multi-LLM Pipeline** — Each stage (planner, writer, editor, continuity, quality gate) can use a different model provider, optimized for its specific task
-- **🧠 Persistent Memory** — Characters, plot threads, and world state are automatically maintained across chapters — no more contradictions
-- **🌏 Bilingual** — Full support for English and Chinese, with language-aware model routing
-- **🔌 Extensible** — Plugin architecture for custom stages, models, and output formats
-- **📊 Real-time Progress** — WebSocket-powered pipeline progress streaming with frontend visualization
+- **🧩 Multi-Agent Swarm** — Each writing role is an autonomous AI agent, collaborating freely through a message bus. LLMs make decisions, not hardcoded logic
+- **🧠 Shared Blackboard** — Agents share results via a blackboard; characters, plot threads, and world state are automatically maintained across chapters
+- **🌏 Bilingual** — Full support for English and Chinese, with language-aware model configuration
+- **🔌 Extensible** — Plugin architecture for custom agents, LLM providers, and output formats
+- **📊 Real-time Progress** — WebSocket-powered progress streaming with frontend visualization
 
-## Pipeline Architecture
+## Architecture
 
-```text
-User Prompt → Planner → Writer → Editor → Continuity → Quality Gate → Output
+### Philosophy: The Framework Doesn't Orchestrate — Agents Decide
+
+Traditional pipelines use code to control execution order and error handling. Storyloom's Agent Swarm is different — the framework provides only three primitives; how agents collaborate is entirely up to the LLM:
+
+```
+┌─────────────────────────────────────────────────────┐
+│  novel layer (business logic)                        │
+│  - defines agent tree (who's in which group)         │
+│  - defines prompts (role cards)                      │
+│  - seeds initial data, waits for chief decision      │
+├─────────────────────────────────────────────────────┤
+│  swarm framework (infrastructure)                    │
+│  ┌───────────────────────────────────────────────┐  │
+│  │ Message Bus — free-form agent conversation     │  │
+│  │  · direct: agent → agent                      │  │
+│  │  · group: agent → entire group                │  │
+│  │  · broadcast: agent → everyone                │  │
+│  ├───────────────────────────────────────────────┤  │
+│  │ Blackboard — shared workspace                  │  │
+│  │  · structured KV store with versioned history  │  │
+│  │  · watch(key_pattern) → change notification   │  │
+│  ├───────────────────────────────────────────────┤  │
+│  │ Agent Runtime — each agent runs its own loop   │  │
+│  │  · perceive → think → act                     │  │
+│  │  · doesn't decide "what to do" — that's LLM's job  │
+│  └───────────────────────────────────────────────┘  │
+├─────────────────────────────────────────────────────┤
+│  providers (pluggable LLM)                           │
+│  ├── LitellmProvider                                 │
+│  ├── CAMELAgent (planned)                            │
+│  └── MockProvider (testing)                          │
+└─────────────────────────────────────────────────────┘
 ```
 
-Each stage is an autonomous AI agent with `approved` / `need_revision` / `rejected` decision capability, supporting up to **2 revision loops** for quality assurance.
+### How It Works
 
-| Stage | Responsibility |
-|-------|---------------|
-| **Planner** | Generates plot outlines, character arcs, and chapter structures from user prompts |
-| **Writer** | Produces prose for each chapter following the plan, configurable for different styles and genres |
-| **Editor** | Revises output for grammar, pacing, and narrative consistency |
-| **Continuity** | Tracks characters, locations, timelines, and plot threads across chapters |
-| **Quality Gate** | Evaluates readability, coherence, and style adherence |
-| **Output** | Formats the final novel into Markdown, EPUB, PDF, etc. |
+```
+1. Initial context is written to the blackboard (story bible, character cards, world state)
+2. All agents start → each enters its perceive loop
+3. Planner detects a change → LLM decides to plan the arc outline
+4. Writer detects the plan → LLM decides to write chapters
+5. Continuity finds a contradiction → sends a direct message to the relevant writer
+6. Editor polishes → Quality reviews → Chief editor makes the final call
+7. Loop continues until the chief approves
+```
+
+Agents can **talk directly** (via message bus) or **collaborate indirectly** (via blackboard). The framework never decides "what should happen next" — that's always the LLM's judgment call.
+
+### Project Structure
+
+```
+storyloom/
+├── backend/
+│   └── storyloom/
+│       ├── core/              # (migrating) legacy pipeline
+│       ├── swarm/             # Agent Swarm Framework
+│       │   ├── models.py      # AgentNode, Message, BlackboardEntry
+│       │   ├── blackboard.py  # Shared blackboard (KV + pattern watch)
+│       │   ├── message_bus.py # Message bus (direct/group/broadcast)
+│       │   ├── provider.py    # AgentProvider protocol
+│       │   ├── runtime.py     # Agent loop (perceive→think→act)
+│       │   ├── providers/     # LLM Provider implementations
+│       │   └── novel/         # Novel writing business layer
+│       │       ├── prompts.py     # Chinese Agent Prompts
+│       │       ├── tree_factory.py # Build the agent tree
+│       │       └── orch.py        # run_story_arc() entry point
+│       ├── providers/         # LLM provider wrappers
+│       ├── memory/            # Persistent memory system
+│       ├── config/            # Configuration loading
+│       ├── i18n/              # Bilingual prompt templates
+│       └── api/               # FastAPI routes
+├── frontend/                  # Vue 3 SPA
+└── docker-compose.yml
+```
 
 ## Quick Start
 
@@ -129,22 +189,6 @@ DEEPSEEK_API_KEY=sk-...
 | Editor | Claude Sonnet | Claude Sonnet |
 | Continuity | Claude Haiku | Claude Haiku |
 | Quality Gate | Claude Sonnet | Claude Sonnet |
-
-## Project Structure
-
-```
-storyloom/
-├── backend/
-│   └── storyloom/
-│       ├── core/          # Pipeline orchestration + stage implementations
-│       ├── providers/     # LLM provider wrappers
-│       ├── memory/        # Persistent memory system
-│       ├── config/        # Configuration loading
-│       ├── i18n/          # Bilingual prompt templates
-│       └── api/           # FastAPI routes
-├── frontend/              # Vue 3 SPA
-└── docker-compose.yml
-```
 
 ## License
 
