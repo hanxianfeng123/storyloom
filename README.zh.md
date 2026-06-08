@@ -91,33 +91,6 @@ Storyloom 是一个 AI 驱动的小说创作平台。它通过多个自主 AI Ag
 
 Agent 之间可以**直接对话**，也可以**通过黑板间接协作**，一切由 LLM 自主判断。框架从不决定"下一步该做什么"。
 
-### 项目结构
-
-```
-storyloom/
-├── backend/
-│   └── storyloom/
-│       ├── core/              # (迁移中) 原流水线实现
-│       ├── swarm/             # Agent Swarm 框架
-│       │   ├── models.py      # AgentNode, Message, BlackboardEntry
-│       │   ├── blackboard.py  # 共享黑板（KV + 模式监听）
-│       │   ├── message_bus.py # 消息总线（直接/组播/广播）
-│       │   ├── provider.py    # AgentProvider 协议
-│       │   ├── runtime.py     # Agent 循环（感知→思考→行动）
-│       │   ├── providers/     # LLM Provider 实现
-│       │   └── novel/         # 小说写作业务层
-│       │       ├── prompts.py     # 中文 Agent Prompt
-│       │       ├── tree_factory.py # 构建 Agent 树
-│       │       └── orch.py        # run_story_arc() 入口
-│       ├── providers/         # LLM 提供商封装
-│       ├── memory/            # 持久化系统
-│       ├── config/            # 配置加载
-│       ├── i18n/              # 中英文提示词模板
-│       └── api/               # FastAPI 路由
-├── frontend/                  # Vue 3 SPA
-└── docker-compose.yml
-```
-
 ## 快速开始
 
 ### 安装

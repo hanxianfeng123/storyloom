@@ -100,33 +100,6 @@ Traditional pipelines use code to control execution order and error handling. St
 
 Agents can **talk directly** (via message bus) or **collaborate indirectly** (via blackboard). The framework never decides "what should happen next" — that's always the LLM's judgment call.
 
-### Project Structure
-
-```
-storyloom/
-├── backend/
-│   └── storyloom/
-│       ├── core/              # (migrating) legacy pipeline
-│       ├── swarm/             # Agent Swarm Framework
-│       │   ├── models.py      # AgentNode, Message, BlackboardEntry
-│       │   ├── blackboard.py  # Shared blackboard (KV + pattern watch)
-│       │   ├── message_bus.py # Message bus (direct/group/broadcast)
-│       │   ├── provider.py    # AgentProvider protocol
-│       │   ├── runtime.py     # Agent loop (perceive→think→act)
-│       │   ├── providers/     # LLM Provider implementations
-│       │   └── novel/         # Novel writing business layer
-│       │       ├── prompts.py     # Chinese Agent Prompts
-│       │       ├── tree_factory.py # Build the agent tree
-│       │       └── orch.py        # run_story_arc() entry point
-│       ├── providers/         # LLM provider wrappers
-│       ├── memory/            # Persistent memory system
-│       ├── config/            # Configuration loading
-│       ├── i18n/              # Bilingual prompt templates
-│       └── api/               # FastAPI routes
-├── frontend/                  # Vue 3 SPA
-└── docker-compose.yml
-```
-
 ## Quick Start
 
 ### Install
